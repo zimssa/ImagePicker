@@ -16,11 +16,12 @@
 @property (nonatomic, assign) bool be_progressed;
 @property (nonatomic, assign) bool be_finished;
 @property (nonatomic, assign) double percent;
-@property (nonatomic, strong) NSString * image_fullsize;
-@property (nonatomic, strong) NSString * image_thumb;
+//@property (nonatomic, strong) NSString * image_fullsize;
+//@property (nonatomic, strong) NSString * image_thumb;
+@property (nonatomic, strong) UIImage* image;
 
 
-@property (nonatomic, assign) bool be_saving_img_thumb;
+//@property (nonatomic, assign) bool be_saving_img_thumb;
 @property (nonatomic, assign) bool be_saving_img;
 
 @end

@@ -10,7 +10,7 @@
 
 @implementation GMFetchItem
 
-@synthesize be_progressed, be_finished, percent, image_fullsize, image_thumb, be_saving_img, be_saving_img_thumb;
+@synthesize be_progressed, be_finished, percent, image, be_saving_img;
 
 - (id)init{
     
@@ -19,12 +19,12 @@
     be_progressed = false;
     be_finished = false;
     percent = 0;
-    
-    image_thumb = nil;
-    image_fullsize = nil;
+//    image_thumb = nil;
+//    image_fullsize = nil;
+    image = nil;
     
     be_saving_img = false;
-    be_saving_img_thumb;
+    //be_saving_img_thumb;
     
     return self;
 }

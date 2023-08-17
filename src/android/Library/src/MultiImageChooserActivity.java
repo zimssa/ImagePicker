@@ -52,7 +52,6 @@ import android.content.CursorLoader;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.Loader;
-import android.content.pm.ActivityInfo;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -62,8 +61,8 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.MediaStore;
-import android.support.v7.app.ActionBar;
-import android.support.v7.app.AppCompatActivity;
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AppCompatActivity;
 import android.util.Base64;
 import android.util.SparseBooleanArray;
 import android.view.Display;
@@ -426,7 +425,7 @@ public class MultiImageChooserActivity extends AppCompatActivity implements
     /*********************
     * Nested Classes
     ********************/
-    private class SquareImageView extends ImageView {
+    private class SquareImageView extends androidx.appcompat.widget.AppCompatImageView {
         public SquareImageView(Context context) {
 			super(context);
 		}
@@ -661,11 +660,18 @@ public class MultiImageChooserActivity extends AppCompatActivity implements
         private File storeImage(Bitmap bmp, String fileName) throws IOException {
             int index = fileName.lastIndexOf('.');
             String name = fileName.substring(0, index);
-            String ext = fileName.substring(index);
+            Bitmap.CompressFormat imageFormat = getCompressFormat(fileName.substring(index));
+            String ext;
+            if (imageFormat == Bitmap.CompressFormat.PNG) {
+                ext = ".png";
+            } else {
+                ext = ".jpeg";
+            }
+
             File file = File.createTempFile("tmp_" + name, ext);
             OutputStream outStream = new FileOutputStream(file);
 
-            if (ext.compareToIgnoreCase(".png") == 0) {
+            if (imageFormat == Bitmap.CompressFormat.PNG) {
                 bmp.compress(Bitmap.CompressFormat.PNG, quality, outStream);
             } else {
                 bmp.compress(Bitmap.CompressFormat.JPEG, quality, outStream);
@@ -674,6 +680,14 @@ public class MultiImageChooserActivity extends AppCompatActivity implements
             outStream.flush();
             outStream.close();
             return file;
+        }
+
+        private Bitmap.CompressFormat getCompressFormat(String ext) {
+            if (ext.compareToIgnoreCase(".png") == 0) {
+                return Bitmap.CompressFormat.PNG;
+            } else {
+                return Bitmap.CompressFormat.JPEG;
+            }
         }
 
         private Bitmap getResizedBitmap(Bitmap bm, float factor) {

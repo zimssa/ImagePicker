@@ -3,6 +3,7 @@
 //  SyncOnSet
 //
 //  Created by Christopher Sullivan on 10/25/13.
+//  ImagePicker
 //
 //
 
@@ -63,10 +64,9 @@ typedef enum : NSUInteger {
     }
 }
 
-- (void) getPictures:(CDVInvokedUrlCommand *)command {
-
+- (void)openMultiplePhotoLibrary:(CDVInvokedUrlCommand *)command {
     NSDictionary *options = [command.arguments objectAtIndex: 0];
-
+    
     self.outputType = [[options objectForKey:@"outputType"] integerValue];
     BOOL allow_video = [[options objectForKey:@"allow_video" ] boolValue ];
     NSInteger maximumImagesCount = [[options objectForKey:@"maximumImagesCount"] integerValue];
@@ -74,14 +74,60 @@ typedef enum : NSUInteger {
     NSString * message = [options objectForKey:@"message"];
     BOOL disable_popover = [[options objectForKey:@"disable_popover" ] boolValue];
     if (message == (id)[NSNull null]) {
-      message = nil;
+        message = nil;
     }
     self.width = [[options objectForKey:@"width"] integerValue];
     self.height = [[options objectForKey:@"height"] integerValue];
     self.quality = [[options objectForKey:@"quality"] integerValue];
-
+    
     self.callbackId = command.callbackId;
     [self launchGMImagePicker:allow_video title:title message:message disable_popover:disable_popover maximumImagesCount:maximumImagesCount];
+}
+
+- (void) getPictures:(CDVInvokedUrlCommand *)command {
+    PHAuthorizationStatus status = [PHPhotoLibrary authorizationStatus];
+    __weak SOSPicker* weakSelf = self;
+    if (status != PHAuthorizationStatusAuthorized) {
+        if (status == PHAuthorizationStatusNotDetermined) {
+            // Access has not been determined. requestAuthorization: is available
+            [PHPhotoLibrary requestAuthorization:^(PHAuthorizationStatus status) {
+                if (status == PHAuthorizationStatusAuthorized) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [weakSelf openMultiplePhotoLibrary:command];
+                    });
+                    
+                } else {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [weakSelf handleAuthorizationRequestDenied:status command:command];
+                    });
+                    
+                }
+            }];
+        } else {
+            [self handleAuthorizationRequestDenied:status command:command];
+        }
+    } else {
+        [self openMultiplePhotoLibrary:command];
+    }
+}
+
+- (void) handleAuthorizationRequestDenied:(PHAuthorizationStatus) status command: (CDVInvokedUrlCommand *)command {
+    if (status == PHAuthorizationStatusDenied) {
+        NSString* message = @"앨범 접근이 거부되었습니다. [설정 > 짐싸 > 사진]에서 접근 권한을 허용해 주세요";
+        
+        CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:message];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+    } else if (status == PHAuthorizationStatusRestricted) {
+        NSString* message = @"앨범 접근이 제한되었습니다. [설정 > 개인 정보 보호 > 사진]에서 접근 권한을 허용해 주세요";
+        
+        CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:message];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+    } else {
+        NSString* message = @"앨범 접근 권한을 허용해 주세요";
+        
+        CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:message];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+    }
 }
 
 - (void)launchGMImagePicker:(bool)allow_video title:(NSString *)title message:(NSString *)message disable_popover:(BOOL)disable_popover maximumImagesCount:(NSInteger)maximumImagesCount
@@ -190,11 +236,11 @@ typedef enum : NSUInteger {
     CDVPluginResult* result = nil;
 
     for (GMFetchItem *item in fetchArray) {
-
-        if ( !item.image_fullsize ) {
+        
+        if ( !item.image ) {
             continue;
         }
-
+        
         do {
             filePath = [NSString stringWithFormat:@"%@/%@%03d.%@", docsPath, CDV_PHOTO_PREFIX, i++, @"jpg"];
         } while ([fileMgr fileExistsAtPath:filePath]);
@@ -203,16 +249,19 @@ typedef enum : NSUInteger {
         if (self.width == 0 && self.height == 0) {
             // no scaling required
             if (self.outputType == BASE64_STRING){
-                UIImage* image = [UIImage imageNamed:item.image_fullsize];
+                UIImage* image = item.image;
                 [result_all addObject:[UIImageJPEGRepresentation(image, self.quality/100.0f) base64EncodedStringWithOptions:0]];
             } else {
                 if (self.quality == 100) {
                     // no scaling, no downsampling, this is the fastest option
-                    [result_all addObject:item.image_fullsize];
+                    if ( ![ UIImageJPEGRepresentation(item.image, 0.2f ) writeToFile:filePath atomically:YES ] ) {
+                        continue;
+                    }
+                    [result_all addObject:filePath];
                 } else {
                     // resample first
-                    UIImage* image = [UIImage imageNamed:item.image_fullsize];
-                    data = UIImageJPEGRepresentation(image, self.quality/100.0f);
+                    UIImage* image = item.image;
+                    data = UIImageJPEGRepresentation(image, 0.2f * self.quality/100.0f);
                     if (![data writeToFile:filePath options:NSAtomicWrite error:&err]) {
                         result = [CDVPluginResult resultWithStatus:CDVCommandStatus_IO_EXCEPTION messageAsString:[err localizedDescription]];
                         break;
@@ -223,9 +272,9 @@ typedef enum : NSUInteger {
             }
         } else {
             // scale
-            UIImage* image = [UIImage imageNamed:item.image_fullsize];
+            UIImage* image = item.image;
             UIImage* scaledImage = [self imageByScalingNotCroppingForSize:image toSize:targetSize];
-            data = UIImageJPEGRepresentation(scaledImage, self.quality/100.0f);
+            data = UIImageJPEGRepresentation(scaledImage, 0.2f * self.quality/100.0f);
 
             if (![data writeToFile:filePath options:NSAtomicWrite error:&err]) {
                 result = [CDVPluginResult resultWithStatus:CDVCommandStatus_IO_EXCEPTION messageAsString:[err localizedDescription]];

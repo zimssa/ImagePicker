@@ -390,29 +390,29 @@ NSString * const GMGridViewCellIdentifier = @"GMGridViewCellIdentifier";
                                       if (cell.tag == currentTag) {
                                           [cell.imageView setImage:result];
                                       }
-                                      
-                                      if ( fetch_item.be_saving_img_thumb==false && fetch_item.image_thumb == nil && result!= nil ) {
-                                          
-                                          fetch_item.be_saving_img_thumb = true;
-                                          
-                                          NSString * filePath;
-                                          do {
-                                              filePath = [NSString stringWithFormat:@"%@/%@%03d.%@", docsPath, CDV_THUMB_PREFIX, doc_thumbCount++, @"jpg"];
-                                          } while ([fileMgr fileExistsAtPath:filePath]);
-                                          
-                                          dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-                                              
-                                              fetch_item.be_saving_img_thumb = false;
-                                            
-                                              // TODO pass in quality
-                                              if ( ![ UIImageJPEGRepresentation(result, 1.0f ) writeToFile:filePath atomically:YES ] ) {
-                                                  return;
-                                              }
-                                              
-                                              fetch_item.image_thumb = filePath;
-                                              
-                                          });
-                                      }
+                                      //mkkim : 썸네일 저장 안한다.
+//                                      if ( fetch_item.be_saving_img_thumb==false && fetch_item.image_thumb == nil && result!= nil ) {
+//
+//                                          fetch_item.be_saving_img_thumb = true;
+//
+//                                          NSString * filePath;
+//                                          do {
+//                                              filePath = [NSString stringWithFormat:@"%@/%@%03d.%@", docsPath, CDV_THUMB_PREFIX, doc_thumbCount++, @"jpg"];
+//                                          } while ([fileMgr fileExistsAtPath:filePath]);
+//
+//                                          dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+//
+//                                              fetch_item.be_saving_img_thumb = false;
+//
+//                                              // TODO pass in quality
+//                                              if ( ![ UIImageJPEGRepresentation(result, 1.0f ) writeToFile:filePath atomically:YES ] ) {
+//                                                  return;
+//                                              }
+//
+//                                              fetch_item.image_thumb = filePath;
+//
+//                                          });
+//                                      }
                                       
                                       /*GMGridViewCell *cell = (GMGridViewCell *)[collectionView cellForItemAtIndexPath:indexPath];
                                       
@@ -447,8 +447,8 @@ NSString * const GMGridViewCellIdentifier = @"GMGridViewCellIdentifier";
     if ( cell == nil || fetch_item==nil || fetch_item.be_progressed ) {
         return NO;
     }
- 
-    if ( fetch_item.be_saving_img == false && fetch_item.image_fullsize == nil  ) {
+    //mkkim 수정
+    if ( fetch_item.be_saving_img == false && fetch_item.image == nil  ) {
         
         fetch_item.be_progressed = true;
         [ cell show_progress ];
@@ -517,8 +517,10 @@ NSString * const GMGridViewCellIdentifier = @"GMGridViewCellIdentifier";
                     return;
                 }
                 
-                fetch_item.image_fullsize = filePath;
+                //mkkim 수정
+                //fetch_item.image_fullsize = filePath;
                 fetch_item.be_saving_img = false;
+                fetch_item.image = imageToDisplay;
                 
                 dispatch_async(dispatch_get_main_queue(), ^{
                     
