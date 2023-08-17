@@ -8,11 +8,10 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-
-import androidx.core.content.ContextCompat;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
@@ -23,7 +22,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 
-import javax.naming.Context;
+import android.content.Context;
 
 import static android.content.Context.MODE_PRIVATE;
 
@@ -41,6 +40,7 @@ public class ImagePicker extends CordovaPlugin {
 
     private Intent imagePickerIntent;
     private static Activity cordovaActivity = null;
+
     @Override
     protected void pluginInitialize() {
         super.pluginInitialize();
@@ -67,7 +67,7 @@ public class ImagePicker extends CordovaPlugin {
             if (hasReadPermission()) {
                 cordova.startActivityForResult(this, imagePickerIntent, 0);
             } else {
-                if(getPreference(PERMISSION_REQUESTED) == false) {
+                if (getPreference(PERMISSION_REQUESTED) == false) {
                     requestReadPermission();
                     //callbackContext.success();
                 } else {
@@ -79,14 +79,14 @@ public class ImagePicker extends CordovaPlugin {
         return false;
     }
 
-    private void setPreference(String name, boolean value){
+    private void setPreference(String name, boolean value) {
         SharedPreferences settings = cordovaActivity.getSharedPreferences(SETTINGS_NAME, MODE_PRIVATE);
         SharedPreferences.Editor editor = settings.edit();
         editor.putBoolean(name, value);
         editor.apply();
     }
 
-    private boolean getPreference(String name){
+    private boolean getPreference(String name) {
         SharedPreferences settings = cordovaActivity.getSharedPreferences(SETTINGS_NAME, MODE_PRIVATE);
         return settings.getBoolean(name, false);
     }
@@ -139,20 +139,20 @@ public class ImagePicker extends CordovaPlugin {
     @SuppressLint("InlinedApi")
     private boolean hasReadPermission() {
         String permission = getReadPermission();
-        
+
         return cordova.hasPermission(permission);
     }
 
     @SuppressLint("InlinedApi")
     private void requestReadPermission() {
         if (!hasReadPermission()) {
-            String[] permissions = { getReadPermission() };
-            
+            String[] permissions = {getReadPermission()};
+
             setPreference(PERMISSION_REQUESTED, true);
             cordova.requestPermissions(this,
                     PERMISSION_REQUEST_CODE,
                     permissions
-                    );
+            );
         }
     }
 
