@@ -117,10 +117,7 @@
         <framework src="com.android.support:appcompat-v7:$ANDROID_SUPPORT_V7_VERSION" />
 
         <source-file src="src/android/com/synconset/ImagePicker/ImagePicker.java" target-dir="src/com/synconset" />
-        <!-- <source-file src="src/android/com/synconset/ImagePicker/FakeR.java" target-dir="src/com/synconset" /> -->
         <source-file src="src/android/com/synconset/ImagePicker/ResultIPC.java" target-dir="src/com/synconset" />
-
-        <!-- <source-file src="src/android/Library/src/ImageFetcher.java" target-dir="src/com/synconset"/> -->
         <source-file src="src/android/Library/src/MultiImageChooserActivity.java" target-dir="src/com/synconset"/>
 
         <resource-file src="src/android/Library/res/anim/image_pop_in.xml" target="res/anim/image_pop_in.xml"/>
