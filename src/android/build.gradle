@@ -1,6 +1,0 @@
-android {
-    defaultConfig {
-       compileSdk 33
-       compileSdkExtension 4
-    }
-}
