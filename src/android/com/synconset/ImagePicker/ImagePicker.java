@@ -52,31 +52,42 @@ public class ImagePicker extends CordovaPlugin {
             throws JSONException {
         this.callbackContext = callbackContext;
 
-        if (ACTION_HAS_READ_PERMISSION.equals(action)) {
-            callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, hasReadPermission()));
-            return true;
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            switch (action) {
+                case ACTION_HAS_READ_PERMISSION:
+                    callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, hasReadPermission()));
+                    return true;
 
-        } else if (ACTION_REQUEST_READ_PERMISSION.equals(action)) {
-            requestReadPermission();
-            return true;
+                case ACTION_REQUEST_READ_PERMISSION:
+                    requestReadPermission();
+                    return true;
 
-        } else if (ACTION_GET_PICTURES.equals(action)) {
+                case ACTION_GET_PICTURES:
+                    final JSONObject params = args.getJSONObject(0);
+                    imagePickerIntent = getImagePickerIntent(params);
+
+                    if (hasReadPermission()) {
+                        cordova.startActivityForResult(this, imagePickerIntent, 0);
+                    } else if (!getPreference(PERMISSION_REQUESTED)) {
+                        requestReadPermission();
+                    } else {
+                        callbackContext.error("저장소 접근이 제한되었습니다. [설정 > 앱 > " + getApplicationName()
+                                + "]에서 저장소 접근 권한을 허용해 주세요.");
+                    }
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        if (ACTION_GET_PICTURES.equals(action)) {
             final JSONObject params = args.getJSONObject(0);
             imagePickerIntent = getImagePickerIntent(params);
-
-            if (hasReadPermission()) {
-                cordova.startActivityForResult(this, imagePickerIntent, 0);
-            } else {
-                if (getPreference(PERMISSION_REQUESTED) == false) {
-                    requestReadPermission();
-                    // callbackContext.success();
-                } else {
-                    callbackContext
-                            .error("저장소 접근이 제한되었습니다. [설정 > 앱 > " + getApplicationName() + "]에서 저장소 접근 권한을 허용해 주세요.");
-                }
-            }
+            cordova.startActivityForResult(this, imagePickerIntent, 0);
             return true;
         }
+
         return false;
     }
 
@@ -124,28 +135,16 @@ public class ImagePicker extends CordovaPlugin {
         return imagePickerIntent;
     }
 
-    // nryang: Android13(targetSdkVersion33) 타겟팅 이후 미디어 권한 세분화
-    private String getReadPermission() {
-        String permission = "";
-
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            permission = Manifest.permission.READ_EXTERNAL_STORAGE;
-        }
-
-        return permission;
-    }
-
     @SuppressLint("InlinedApi")
     private boolean hasReadPermission() {
-        String permission = getReadPermission();
-
+        String permission = Manifest.permission.READ_EXTERNAL_STORAGE;
         return cordova.hasPermission(permission);
     }
 
     @SuppressLint("InlinedApi")
     private void requestReadPermission() {
         if (!hasReadPermission()) {
-            String[] permissions = { getReadPermission() };
+            String[] permissions = { Manifest.permission.READ_EXTERNAL_STORAGE };
 
             setPreference(PERMISSION_REQUESTED, true);
             cordova.requestPermissions(this,
