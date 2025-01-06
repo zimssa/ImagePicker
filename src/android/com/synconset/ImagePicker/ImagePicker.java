@@ -10,8 +10,12 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.content.Context;
+
 import android.os.Build;
 import android.os.Bundle;
+
+import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
@@ -21,8 +25,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-
-import android.content.Context;
 
 import static android.content.Context.MODE_PRIVATE;
 
@@ -52,7 +54,7 @@ public class ImagePicker extends CordovaPlugin {
             throws JSONException {
         this.callbackContext = callbackContext;
 
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+        if (!isPhotoPickerAvailable()) {
             switch (action) {
                 case ACTION_HAS_READ_PERMISSION:
                     callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, hasReadPermission()));
@@ -207,5 +209,10 @@ public class ImagePicker extends CordovaPlugin {
         ApplicationInfo applicationInfo = context.getApplicationInfo();
         int stringId = applicationInfo.labelRes;
         return stringId == 0 ? applicationInfo.nonLocalizedLabel.toString() : context.getString(stringId);
+    }
+
+    private boolean isPhotoPickerAvailable() {
+        Context context = cordovaActivity.getApplicationContext();
+        return PickVisualMedia.isPhotoPickerAvailable(context);
     }
 }
