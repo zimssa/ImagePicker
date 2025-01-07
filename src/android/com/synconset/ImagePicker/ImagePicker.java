@@ -10,8 +10,12 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.content.Context;
+
 import android.os.Build;
 import android.os.Bundle;
+
+import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
@@ -21,8 +25,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-
-import android.content.Context;
 
 import static android.content.Context.MODE_PRIVATE;
 
@@ -48,34 +50,46 @@ public class ImagePicker extends CordovaPlugin {
         cordovaActivity = this.cordova.getActivity();
     }
 
-    public boolean execute(String action, final JSONArray args, final CallbackContext callbackContext) throws JSONException {
+    public boolean execute(String action, final JSONArray args, final CallbackContext callbackContext)
+            throws JSONException {
         this.callbackContext = callbackContext;
 
-        if (ACTION_HAS_READ_PERMISSION.equals(action)) {
-            callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, hasReadPermission()));
-            return true;
+        if (!isPhotoPickerAvailable()) {
+            switch (action) {
+                case ACTION_HAS_READ_PERMISSION:
+                    callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, hasReadPermission()));
+                    return true;
 
-        } else if (ACTION_REQUEST_READ_PERMISSION.equals(action)) {
-            requestReadPermission();
-            return true;
+                case ACTION_REQUEST_READ_PERMISSION:
+                    requestReadPermission();
+                    return true;
 
-        } else if (ACTION_GET_PICTURES.equals(action)) {
+                case ACTION_GET_PICTURES:
+                    final JSONObject params = args.getJSONObject(0);
+                    imagePickerIntent = getImagePickerIntent(params);
+
+                    if (hasReadPermission()) {
+                        cordova.startActivityForResult(this, imagePickerIntent, 0);
+                    } else if (!getPreference(PERMISSION_REQUESTED)) {
+                        requestReadPermission();
+                    } else {
+                        callbackContext.error("저장소 접근이 제한되었습니다. [설정 > 앱 > " + getApplicationName()
+                                + "]에서 저장소 접근 권한을 허용해 주세요.");
+                    }
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        if (ACTION_GET_PICTURES.equals(action)) {
             final JSONObject params = args.getJSONObject(0);
             imagePickerIntent = getImagePickerIntent(params);
-
-
-            if (hasReadPermission()) {
-                cordova.startActivityForResult(this, imagePickerIntent, 0);
-            } else {
-                if (getPreference(PERMISSION_REQUESTED) == false) {
-                    requestReadPermission();
-                    //callbackContext.success();
-                } else {
-                    callbackContext.error("저장소 접근이 제한되었습니다. [설정 > 앱 > " + getApplicationName() + "]에서 저장소 접근 권한을 허용해 주세요.");
-                }
-            }
+            cordova.startActivityForResult(this, imagePickerIntent, 0);
             return true;
         }
+
         return false;
     }
 
@@ -123,36 +137,21 @@ public class ImagePicker extends CordovaPlugin {
         return imagePickerIntent;
     }
 
-    // nryang: Android13(targetSdkVersion33) 타겟팅 이후 미디어 권한 세분화
-    private String getReadPermission() {
-        String permission;
-
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            permission = Manifest.permission.READ_EXTERNAL_STORAGE;
-        } else {
-            permission = Manifest.permission.READ_MEDIA_IMAGES;
-        }
-
-        return permission;
-    }
-
     @SuppressLint("InlinedApi")
     private boolean hasReadPermission() {
-        String permission = getReadPermission();
-
+        String permission = Manifest.permission.READ_EXTERNAL_STORAGE;
         return cordova.hasPermission(permission);
     }
 
     @SuppressLint("InlinedApi")
     private void requestReadPermission() {
         if (!hasReadPermission()) {
-            String[] permissions = {getReadPermission()};
+            String[] permissions = { Manifest.permission.READ_EXTERNAL_STORAGE };
 
             setPreference(PERMISSION_REQUESTED, true);
             cordova.requestPermissions(this,
                     PERMISSION_REQUEST_CODE,
-                    permissions
-            );
+                    permissions);
         }
     }
 
@@ -179,10 +178,10 @@ public class ImagePicker extends CordovaPlugin {
         }
     }
 
-
     /**
      * Choosing a picture launches another Activity, so we need to implement the
-     * save/restore APIs to handle the case where the CordovaActivity is killed by the OS
+     * save/restore APIs to handle the case where the CordovaActivity is killed by
+     * the OS
      * before we get the launched Activity's result.
      *
      * @see ://cordova.apache.org/docs/en/dev/guide/platforms/android/plugin.html#launching-other-activities
@@ -191,11 +190,10 @@ public class ImagePicker extends CordovaPlugin {
         this.callbackContext = callbackContext;
     }
 
-
     @Override
     public void onRequestPermissionResult(int requestCode,
-                                          String[] permissions,
-                                          int[] grantResults) throws JSONException {
+            String[] permissions,
+            int[] grantResults) throws JSONException {
 
         // For now we just have one permission, so things can be kept simple...
         if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
@@ -211,5 +209,10 @@ public class ImagePicker extends CordovaPlugin {
         ApplicationInfo applicationInfo = context.getApplicationInfo();
         int stringId = applicationInfo.labelRes;
         return stringId == 0 ? applicationInfo.nonLocalizedLabel.toString() : context.getString(stringId);
+    }
+
+    private boolean isPhotoPickerAvailable() {
+        Context context = cordovaActivity.getApplicationContext();
+        return PickVisualMedia.isPhotoPickerAvailable(context);
     }
 }
