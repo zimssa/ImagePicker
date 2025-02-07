@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ContentResolver;
+import android.util.Log;
 
 import android.net.Uri;
 import android.os.Bundle;
@@ -42,7 +43,13 @@ public class MultiImageChooserActivity extends AppCompatActivity {
                         ArrayList<String> stringList = new ArrayList<>();
                         for (Uri uri : uris) {
                             stringList.add(uri.toString());
-                            contentResolver.takePersistableUriPermission(uri, flag);
+                            try {
+                                contentResolver.takePersistableUriPermission(uri, flag);
+                            } catch (SecurityException e) {
+                                Log.e("PickMedia", "Failed to take persistable URI permission: " +
+                                        e.getMessage());
+                            }
+
                         }
                         postImages(stringList);
                     } else {
