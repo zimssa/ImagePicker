@@ -107,10 +107,6 @@
             <activity android:label="@string/multi_app_name" android:name="com.synconset.MultiImageChooserActivity" android:theme="@style/TransparentTheme" />
         </config-file>
 
-        <config-file target="AndroidManifest.xml" parent="/manifest">
-            <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-        </config-file>
-
         <preference name="ANDROID_SUPPORT_V7_VERSION" default="27.+"/>
         <framework src="com.android.support:appcompat-v7:$ANDROID_SUPPORT_V7_VERSION" />
 
