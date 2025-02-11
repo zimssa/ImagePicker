@@ -36,7 +36,8 @@ public class MultiImageChooserActivity extends AppCompatActivity {
         maxImageCount = maxImages;
 
         ActivityResultLauncher<PickVisualMediaRequest> pickMultipleMedia = registerForActivityResult(
-                new PickMultipleVisualMedia(maxImageCount), uris -> {
+                maxImageCount > 1 ? new PickMultipleVisualMedia(maxImageCount) : new PickMultipleVisualMedia(),
+                uris -> {
                     if (!uris.isEmpty()) {
                         int flag = Intent.FLAG_GRANT_READ_URI_PERMISSION;
                         ContentResolver contentResolver = getApplicationContext().getContentResolver();
@@ -57,9 +58,40 @@ public class MultiImageChooserActivity extends AppCompatActivity {
                     }
 
                 });
-        pickMultipleMedia.launch(new PickVisualMediaRequest.Builder()
+
+        ActivityResultLauncher<PickVisualMediaRequest> pickMedia = registerForActivityResult(
+                new PickVisualMedia(),
+                uri -> {
+                    if (uri != null) {
+                        int flag = Intent.FLAG_GRANT_READ_URI_PERMISSION;
+                        ContentResolver contentResolver = getApplicationContext().getContentResolver();
+                        ArrayList<String> stringList = new ArrayList<>();
+                        stringList.add(uri.toString());
+                        try {
+                            contentResolver.takePersistableUriPermission(uri, flag);
+                        } catch (SecurityException e) {
+                            Log.e("PickMedia", "Failed to take persistable URI permission: " +
+                                    e.getMessage());
+                        }
+                        postImages(stringList);
+                    } else {
+                        super.onBackPressed();
+                    }
+
+                });
+
+        if (maxImageCount > 1) {
+            pickMultipleMedia.launch(new PickVisualMediaRequest.Builder()
+                    .setMediaType(PickVisualMedia.ImageOnly.INSTANCE)
+                    .build());
+            return;
+        }
+
+        pickMedia.launch(new PickVisualMediaRequest.Builder()
                 .setMediaType(PickVisualMedia.ImageOnly.INSTANCE)
                 .build());
+        return;
+
     }
 
     void postImages(ArrayList<String> contentPaths) {
