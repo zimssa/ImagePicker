@@ -34,31 +34,17 @@ public class MultiImageChooserActivity extends AppCompatActivity {
 
         maxImages = getIntent().getIntExtra(MAX_IMAGES_KEY, NOLIMIT);
         maxImageCount = maxImages;
+        boolean isMultipleVisualMediaNeeded = maxImageCount > 1;
 
-        ActivityResultLauncher<PickVisualMediaRequest> pickMultipleMedia = registerForActivityResult(
-                maxImageCount > 1 ? new PickMultipleVisualMedia(maxImageCount) : new PickMultipleVisualMedia(),
-                uris -> {
-                    if (!uris.isEmpty()) {
-                        int flag = Intent.FLAG_GRANT_READ_URI_PERMISSION;
-                        ContentResolver contentResolver = getApplicationContext().getContentResolver();
-                        ArrayList<String> stringList = new ArrayList<>();
-                        for (Uri uri : uris) {
-                            stringList.add(uri.toString());
-                            try {
-                                contentResolver.takePersistableUriPermission(uri, flag);
-                            } catch (SecurityException e) {
-                                Log.e("PickMedia", "Failed to take persistable URI permission: " +
-                                        e.getMessage());
-                            }
+        if (isMultipleVisualMediaNeeded) {
+            launchMultiplePickVisualMediaActivity();
 
-                        }
-                        postImages(stringList);
-                    } else {
-                        super.onBackPressed();
-                    }
+        } else {
+            launchPickVisualMediaActivity();
+        }
+    }
 
-                });
-
+    private void launchPickVisualMediaActivity() {
         ActivityResultLauncher<PickVisualMediaRequest> pickMedia = registerForActivityResult(
                 new PickVisualMedia(),
                 uri -> {
@@ -80,18 +66,38 @@ public class MultiImageChooserActivity extends AppCompatActivity {
 
                 });
 
-        if (maxImageCount > 1) {
-            pickMultipleMedia.launch(new PickVisualMediaRequest.Builder()
-                    .setMediaType(PickVisualMedia.ImageOnly.INSTANCE)
-                    .build());
-            return;
-        }
-
         pickMedia.launch(new PickVisualMediaRequest.Builder()
                 .setMediaType(PickVisualMedia.ImageOnly.INSTANCE)
                 .build());
-        return;
+    }
 
+    private void launchMultiplePickVisualMediaActivity() {
+        ActivityResultLauncher<PickVisualMediaRequest> pickMultipleMedia = registerForActivityResult(
+                new PickMultipleVisualMedia(maxImageCount),
+                uris -> {
+                    if (!uris.isEmpty()) {
+                        int flag = Intent.FLAG_GRANT_READ_URI_PERMISSION;
+                        ContentResolver contentResolver = getApplicationContext().getContentResolver();
+                        ArrayList<String> stringList = new ArrayList<>();
+                        for (Uri uri : uris) {
+                            stringList.add(uri.toString());
+                            try {
+                                contentResolver.takePersistableUriPermission(uri, flag);
+                            } catch (SecurityException e) {
+                                Log.e("PickMedia", "Failed to take persistable URI permission: " +
+                                        e.getMessage());
+                            }
+
+                        }
+                        postImages(stringList);
+                    } else {
+                        super.onBackPressed();
+                    }
+
+                });
+        pickMultipleMedia.launch(new PickVisualMediaRequest.Builder()
+                .setMediaType(PickVisualMedia.ImageOnly.INSTANCE)
+                .build());
     }
 
     void postImages(ArrayList<String> contentPaths) {
